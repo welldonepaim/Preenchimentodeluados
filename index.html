@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Checklist Geradores (Mobile)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#0f1a2e; --card2:#0c1629; --txt:#e5e7eb; --muted:#94a3b8;
+      --line:rgba(148,163,184,.18); --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+      --btn:#2563eb; --btn2:#111827;
+      --radius:18px;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:radial-gradient(1200px 800px at 20% 0%, #142347, transparent 60%),
+                 radial-gradient(1000px 700px at 100% 10%, #1a2b55, transparent 55%),
+                 var(--bg);
+      color:var(--txt);
+    }
+    .app{max-width:520px;margin:0 auto; padding:12px 12px 98px}
+    .top{
+      position:sticky; top:0; z-index:10;
+      background:linear-gradient(to bottom, rgba(11,18,32,.95), rgba(11,18,32,.72), rgba(11,18,32,0));
+      padding:10px 0 12px; backdrop-filter: blur(10px);
+    }
+    .brand{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius);
+      background:linear-gradient(to bottom, rgba(15,26,46,.9), rgba(12,22,41,.88));
+      box-shadow:0 12px 30px rgba(0,0,0,.25);
+    }
+    .brand h1{font-size:15px;margin:0}
+    .brand .sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .chip{font-size:11px;color:var(--muted); border:1px solid var(--line); padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.03)}
+    .section{margin-top:12px}
+    .card{
+      background:linear-gradient(to bottom, rgba(15,26,46,.92), rgba(12,22,41,.90));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:12px;
+      box-shadow:0 10px 26px rgba(0,0,0,.22);
+    }
+    .card h2{margin:0 0 10px;font-size:13px;color:#cbd5e1;letter-spacing:.2px}
+    .field{display:flex; flex-direction:column; gap:6px; margin-top:10px}
+    label{font-size:11px;color:var(--muted)}
+    input, select, textarea{
+      width:100%; border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      color:var(--txt);
+      border-radius:14px;
+      padding:12px 12px;
+      font-size:14px;
+      outline:none;
+    }
+    textarea{min-height:82px;resize:vertical}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    @media (max-width:360px){ .row{grid-template-columns:1fr} }
+    .tabs{
+      display:flex; gap:8px; margin-top:12px;
+      padding:6px; border:1px solid var(--line);
+      border-radius:999px; background:rgba(255,255,255,.03);
+    }
+    .tab{
+      flex:1; border:0; padding:10px 10px; border-radius:999px;
+      background:transparent; color:var(--muted); font-weight:700; font-size:12px;
+      cursor:pointer;
+    }
+    .tab.active{background:rgba(37,99,235,.22); color:#dbeafe; border:1px solid rgba(37,99,235,.28)}
+    .item{
+      margin-top:10px; border:1px solid var(--line);
+      border-radius:16px; padding:12px; background:rgba(255,255,255,.02);
+    }
+    .itemTop{display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
+    .itemTitle{font-weight:800; font-size:13px}
+    .itemDesc{font-size:11px; color:var(--muted); margin-top:2px}
+    .pill{font-size:11px; font-weight:800; padding:6px 10px; border-radius:999px; border:1px solid transparent; white-space:nowrap}
+    .pill.warn{background:rgba(245,158,11,.12); color:#fde68a; border-color:rgba(245,158,11,.22)}
+    .pill.ok{background:rgba(34,197,94,.12); color:#bbf7d0; border-color:rgba(34,197,94,.22)}
+    .pill.bad{background:rgba(239,68,68,.12); color:#fecaca; border-color:rgba(239,68,68,.22)}
+    .req{display:none; font-size:11px; color:#fecaca; font-weight:800}
+    .thumbs{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+    .thumb{width:108px;height:76px;border-radius:14px;border:1px solid var(--line);object-fit:cover;background:rgba(255,255,255,.02)}
+    .hint{font-size:11px;color:var(--muted);margin-top:8px}
+    .footerBar{
+      position:fixed; left:0; right:0; bottom:0; z-index:20;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      background:linear-gradient(to top, rgba(11,18,32,.95), rgba(11,18,32,.72), rgba(11,18,32,0));
+      backdrop-filter: blur(12px);
+    }
+    .actions{
+      max-width:520px; margin:0 auto;
+      display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    }
+    .btn{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px 12px;
+      font-weight:900;
+      font-size:13px;
+      cursor:pointer;
+    }
+    .btn.primary{background:linear-gradient(to bottom, rgba(37,99,235,.95), rgba(37,99,235,.75)); color:#fff; border-color:rgba(37,99,235,.35)}
+    .btn.dark{background:rgba(255,255,255,.03); color:#e5e7eb}
+    .btn.danger{background:rgba(239,68,68,.18); color:#fecaca; border-color:rgba(239,68,68,.28)}
+    .btn.green{background:rgba(34,197,94,.18); color:#bbf7d0; border-color:rgba(34,197,94,.28)}
+    .list{display:flex; flex-direction:column; gap:10px; margin-top:10px}
+    details{border:1px solid var(--line); border-radius:16px; padding:10px; background:rgba(255,255,255,.02)}
+    summary{cursor:pointer; font-weight:900; font-size:12px; color:#e5e7eb; list-style:none}
+    summary::-webkit-details-marker{display:none}
+    .recMeta{font-size:11px;color:var(--muted);margin-top:6px}
+    .recBtns{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap}
+    .mini{padding:10px 10px; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.03); color:var(--txt); font-weight:900; font-size:12px; cursor:pointer}
+    .logoPreview{
+      width:100%; max-width:240px; height:84px;
+      border:1px dashed rgba(148,163,184,.35);
+      border-radius:16px;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(255,255,255,.02);
+      overflow:hidden;
+      margin-top:10px;
+    }
+    .logoPreview img{max-width:100%; max-height:100%; object-fit:contain}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="brand">
+        <div>
+          <h1>Checklist Geradores</h1>
+          <div class="sub">Mobile • salva no aparelho • gera documento padrão</div>
+        </div>
+        <div class="chip" id="chipStatus">Rascunho</div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Geradores">
+        <button class="tab active" id="tabG1" aria-selected="true">Gerador I</button>
+        <button class="tab" id="tabG2" aria-selected="false">Gerador II</button>
+      </div>
+    </div>
+
+    <div class="section card">
+      <h2>Identificação do documento</h2>
+
+      <div class="field">
+        <label>Empresa / Unidade</label>
+        <input id="empresa" type="text" placeholder="Ex.: Hospital Geral / Minha Empresa"/>
+      </div>
+
+      <div class="field">
+        <label>Logo da empresa (opcional)</label>
+        <input id="logoFile" type="file" accept="image/*" />
+        <div class="logoPreview" id="logoPreview">
+          <span class="hint" id="logoHint">Nenhum logo selecionado</span>
+        </div>
+        <div class="hint">O logo fica salvo no aparelho e aparece no documento gerado.</div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Mês</label>
+          <select id="mes">
+            <option value="">Selecione</option>
+            <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+            <option value="04">04</option><option value="05">05</option><option value="06">06</option>
+            <option value="07">07</option><option value="08">08</option><option value="09">09</option>
+            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Ano</label>
+          <input id="ano" type="number" min="2000" max="2100" placeholder="Ex.: 2026"/>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Dia</label>
+          <select id="dia"></select>
+        </div>
+        <div class="field">
+          <label>Setor / Local</label>
+          <input id="setor" type="text" placeholder="Ex.: Casa de máquinas"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Responsável geral</label>
+        <input id="responsavel" type="text" placeholder="Seu nome"/>
+      </div>
+
+      <div class="hint">Regra: se marcar “Não conforme”, a foto fica obrigatória.</div>
+    </div>
+
+    <div class="section card" id="panelG1" role="tabpanel" aria-labelledby="tabG1">
+      <h2>Gerador I</h2>
+      <div id="g1"></div>
+    </div>
+
+    <div class="section card" id="panelG2" style="display:none" role="tabpanel" aria-labelledby="tabG2">
+      <h2>Gerador II</h2>
+      <div id="g2"></div>
+    </div>
+
+    <div class="section card">
+      <h2>Registros salvos</h2>
+      <div id="history" class="list"></div>
+    </div>
+  </div>
+
+  <div class="footerBar">
+    <div class="actions">
+      <button class="btn primary" id="btnSave">Salvar</button>
+      <button class="btn green" id="btnDoc">Gerar documento</button>
+      <button class="btn dark" id="btnExport">Exportar</button>
+      <button class="btn dark" id="btnNew">Novo</button>
+      <button class="btn danger" id="btnClearAll">Apagar tudo</button>
+    </div>
+  </div>
+
+<script>
+/* ====== CONFIG ====== */
+const ITEMS = [
+  { key:"oleo",     title:"Nível de Óleo", statusType:"ok_nok", photoHint:"Foto do nível de óleo" },
+  { key:"baterias", title:"Carga de baterias", statusType:"ok_nok", photoHint:"Foto das baterias / carregador" },
+  { key:"arref",    title:"Nível líquido do sistema de arrefecimento", statusType:"ok_nok", photoHint:"Foto do reservatório" },
+  { key:"preaq",    title:"Verificador do sistema de pré aquecimento", statusType:"funciona", photoHint:"Foto do painel / pré-aquecimento" },
+];
+const LS_DRAFT = "chk_geradores_mobile_draft_v2";
+const LS_RECORDS = "chk_geradores_mobile_records_v2";
+const LS_LOGO = "chk_geradores_logo_v1";
+
+const $ = (id)=>document.getElementById(id);
+const pad2 = (n)=>String(n).padStart(2,"0");
+const nowISO = ()=>new Date().toISOString();
+const ymd = (ano,mes,dia)=>`${ano}-${mes}-${pad2(dia)}`;
+
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+function statusOptions(type){
+  if(type==="funciona"){
+    return `
+      <option value="">Selecione</option>
+      <option value="FUNCIONANDO">Funcionando</option>
+      <option value="NAO_FUNCIONANDO">Não funcionando</option>
+    `;
+  }
+  return `
+    <option value="">Selecione</option>
+    <option value="OK">OK</option>
+    <option value="NAO_CONFORME">Não conforme</option>
+  `;
+}
+function pillClass(status){
+  if(status==="OK"||status==="FUNCIONANDO") return "ok";
+  if(status==="NAO_CONFORME"||status==="NAO_FUNCIONANDO") return "bad";
+  return "warn";
+}
+function pillText(status){
+  if(status==="OK"||status==="FUNCIONANDO") return "OK";
+  if(status==="NAO_CONFORME"||status==="NAO_FUNCIONANDO") return "N/Conforme";
+  return "Pendente";
+}
+
+/* ====== UI RENDER ====== */
+function renderGenerator(containerId, genKey){
+  const root = $(containerId);
+  root.innerHTML = "";
+  ITEMS.forEach(it=>{
+    const div=document.createElement("div");
+    div.className="item";
+    div.innerHTML = `
+      <div class="itemTop">
+        <div>
+          <div class="itemTitle">${it.title}</div>
+          <div class="itemDesc">Status • executor • observação • foto</div>
+        </div>
+        <span class="pill warn" id="${genKey}_${it.key}_pill">Pendente</span>
+      </div>
+
+      <div class="field">
+        <label>Status <span class="req" id="${genKey}_${it.key}_req">*foto obrigatória</span></label>
+        <select id="${genKey}_${it.key}_status">${statusOptions(it.statusType)}</select>
+      </div>
+
+      <div class="field">
+        <label>Executor</label>
+        <input id="${genKey}_${it.key}_exec" type="text" placeholder="Nome do executor"/>
+      </div>
+
+      <div class="field">
+        <label>Observação</label>
+        <textarea id="${genKey}_${it.key}_obs" placeholder="Detalhes (se necessário)"></textarea>
+      </div>
+
+      <div class="field">
+        <label>${it.photoHint}</label>
+        <input id="${genKey}_${it.key}_foto" type="file" accept="image/*" capture="environment" />
+        <div class="thumbs" id="${genKey}_${it.key}_thumbs"></div>
+      </div>
+    `;
+    root.appendChild(div);
+
+    $(`${genKey}_${it.key}_req`).style.display="none";
+
+    $(`${genKey}_${it.key}_status`).addEventListener("change", ()=>{
+      syncItemUI(genKey,it.key);
+      autoSaveDraft();
+    });
+    ["input","change"].forEach(evt=>{
+      $(`${genKey}_${it.key}_exec`).addEventListener(evt, autoSaveDraft);
+      $(`${genKey}_${it.key}_obs`).addEventListener(evt, autoSaveDraft);
+    });
+    $(`${genKey}_${it.key}_foto`).addEventListener("change", async (e)=>{
+      const thumbs=$(`${genKey}_${it.key}_thumbs`);
+      thumbs.innerHTML="";
+      const files=[...e.target.files];
+      for(const f of files){
+        const src=await fileToDataURL(f);
+        const img=document.createElement("img");
+        img.src=src; img.className="thumb";
+        thumbs.appendChild(img);
+      }
+      autoSaveDraft();
+    });
+  });
+}
+function syncItemUI(genKey,itemKey){
+  const st = $(`${genKey}_${itemKey}_status`).value;
+  const pill = $(`${genKey}_${itemKey}_pill`);
+  pill.className = `pill ${pillClass(st)}`;
+  pill.textContent = pillText(st);
+
+  const needsPhoto = (st==="NAO_CONFORME"||st==="NAO_FUNCIONANDO");
+  $(`${genKey}_${itemKey}_req`).style.display = needsPhoto ? "inline" : "none";
+}
+
+/* ====== DATA ====== */
+function collectGenerator(genKey){
+  const data={};
+  for(const it of ITEMS){
+    const status=$(`${genKey}_${it.key}_status`).value;
+    const executor=$(`${genKey}_${it.key}_exec`).value.trim();
+    const observacao=$(`${genKey}_${it.key}_obs`).value.trim();
+    const fotos=[...$(`${genKey}_${it.key}_thumbs`).querySelectorAll("img")].map(img=>img.src);
+    data[it.key]={ status, executor, observacao, fotos };
+  }
+  return data;
+}
+function getLogo(){
+  return localStorage.getItem(LS_LOGO) || "";
+}
+function getPayload(){
+  const mes=$("mes").value, ano=$("ano").value, dia=$("dia").value;
+  return {
+    schema:"chk_geradores_mobile_v2",
+    created_at: nowISO(),
+    empresa: $("empresa").value.trim(),
+    logo: getLogo(),
+    mes, ano, dia,
+    data_ref: (mes && ano && dia) ? ymd(ano,mes,Number(dia)) : "",
+    setor:$("setor").value.trim(),
+    responsavel:$("responsavel").value.trim(),
+    geradores:{ gerador1:collectGenerator("g1"), gerador2:collectGenerator("g2") }
+  };
+}
+function validate(payload){
+  const errs=[];
+  if(!payload.mes) errs.push("Selecione o mês.");
+  if(!payload.ano) errs.push("Informe o ano.");
+  if(!payload.dia) errs.push("Selecione o dia.");
+  ["gerador1","gerador2"].forEach(g=>{
+    for(const it of ITEMS){
+      const st = payload.geradores[g][it.key].status;
+      const fotos = payload.geradores[g][it.key].fotos || [];
+      const needsPhoto = (st==="NAO_CONFORME"||st==="NAO_FUNCIONANDO");
+      if(needsPhoto && fotos.length===0){
+        errs.push(`${g.toUpperCase()} → ${it.title}: foto obrigatória.`);
+      }
+    }
+  });
+  return errs;
+}
+
+/* ====== STORAGE ====== */
+function loadRecords(){
+  try{return JSON.parse(localStorage.getItem(LS_RECORDS)||"[]");}catch{return[];}
+}
+function saveRecords(arr){
+  localStorage.setItem(LS_RECORDS, JSON.stringify(arr));
+}
+function autoSaveDraft(){
+  localStorage.setItem(LS_DRAFT, JSON.stringify(getPayload()));
+  $("chipStatus").textContent = "Rascunho salvo";
+}
+function loadDraft(){
+  try{return JSON.parse(localStorage.getItem(LS_DRAFT)||"null");}catch{return null;}
+}
+function populate(data){
+  if(!data) return;
+  $("empresa").value = data.empresa || "";
+  $("mes").value=data.mes||"";
+  $("ano").value=data.ano||"";
+  $("dia").value=data.dia||"";
+  $("setor").value=data.setor||"";
+  $("responsavel").value=data.responsavel||"";
+
+  if(data.logo){
+    localStorage.setItem(LS_LOGO, data.logo);
+    renderLogoPreview(data.logo);
+  }
+
+  applyGen("g1", data.geradores?.gerador1);
+  applyGen("g2", data.geradores?.gerador2);
+
+  $("chipStatus").textContent = data.data_ref ? `Carregado: ${data.data_ref}` : "Carregado";
+  localStorage.setItem(LS_DRAFT, JSON.stringify(data));
+}
+function applyGen(genKey, genData){
+  if(!genData) return;
+  for(const it of ITEMS){
+    $(`${genKey}_${it.key}_status`).value = genData[it.key]?.status || "";
+    $(`${genKey}_${it.key}_exec`).value = genData[it.key]?.executor || "";
+    $(`${genKey}_${it.key}_obs`).value = genData[it.key]?.observacao || "";
+    const thumbs=$(`${genKey}_${it.key}_thumbs`);
+    thumbs.innerHTML="";
+    (genData[it.key]?.fotos || []).forEach(src=>{
+      const img=document.createElement("img");
+      img.src=src; img.className="thumb";
+      thumbs.appendChild(img);
+    });
+    syncItemUI(genKey,it.key);
+  }
+}
+function upsert(payload){
+  const arr=loadRecords();
+  const idx=arr.findIndex(x=>x.data_ref===payload.data_ref);
+  if(idx>=0){
+    const created_at = arr[idx].created_at || payload.created_at;
+    arr[idx] = { ...payload, created_at, updated_at: nowISO() };
+  } else {
+    arr.unshift({ ...payload, updated_at: nowISO() });
+  }
+  saveRecords(arr);
+  renderHistory();
+  $("chipStatus").textContent = "Salvo ✅";
+}
+
+/* ====== EXPORT ====== */
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=filename;
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ====== HISTORY ====== */
+function renderHistory(){
+  const box=$("history");
+  const arr=loadRecords();
+  if(arr.length===0){
+    box.innerHTML = `<div class="hint">Nenhum registro salvo ainda.</div>`;
+    return;
+  }
+  box.innerHTML="";
+  arr.forEach(r=>{
+    const det=document.createElement("details");
+    const title=r.data_ref || "(sem data)";
+    det.innerHTML=`
+      <summary>${title}</summary>
+      <div class="recMeta">Empresa: ${escapeHtml(r.empresa||"-")} • Setor: ${escapeHtml(r.setor||"-")} • Resp.: ${escapeHtml(r.responsavel||"-")}</div>
+      <div class="recBtns">
+        <button class="mini" data-act="load">Carregar</button>
+        <button class="mini" data-act="doc">Documento</button>
+        <button class="mini" data-act="exp">Exportar</button>
+        <button class="mini" data-act="del">Excluir</button>
+      </div>
+    `;
+    det.querySelector('[data-act="load"]').addEventListener("click",(e)=>{ e.preventDefault(); populate(r); });
+    det.querySelector('[data-act="doc"]').addEventListener("click",(e)=>{ e.preventDefault(); openDocument(r); });
+    det.querySelector('[data-act="exp"]').addEventListener("click",(e)=>{ e.preventDefault(); downloadJSON(r, `registro_${title}.json`); });
+    det.querySelector('[data-act="del"]').addEventListener("click",(e)=>{
+      e.preventDefault();
+      if(confirm(`Excluir ${title}?`)){
+        saveRecords(loadRecords().filter(x=>x.data_ref!==r.data_ref));
+        renderHistory();
+      }
+    });
+    box.appendChild(det);
+  });
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[s]));
+}
+
+/* ====== TABS ====== */
+function setTab(which){
+  const is1 = which==="g1";
+  $("panelG1").style.display = is1 ? "block" : "none";
+  $("panelG2").style.display = is1 ? "none" : "block";
+  $("tabG1").classList.toggle("active", is1);
+  $("tabG2").classList.toggle("active", !is1);
+  $("tabG1").setAttribute("aria-selected", is1 ? "true":"false");
+  $("tabG2").setAttribute("aria-selected", !is1 ? "true":"false");
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+/* ====== LOGO ====== */
+function renderLogoPreview(dataUrl){
+  const box = $("logoPreview");
+  box.innerHTML = "";
+  if(!dataUrl){
+    box.innerHTML = `<span class="hint" id="logoHint">Nenhum logo selecionado</span>`;
+    return;
+  }
+  const img = document.createElement("img");
+  img.src = dataUrl;
+  img.alt = "Logo";
+  box.appendChild(img);
+}
+
+/* ====== DOCUMENTO PADRÃO (print/PDF) ====== */
+function statusLabel(st){
+  if(st==="OK"||st==="FUNCIONANDO") return "OK";
+  if(st==="NAO_CONFORME") return "NÃO CONFORME";
+  if(st==="NAO_FUNCIONANDO") return "NÃO FUNCIONANDO";
+  return "—";
+}
+function openDocument(payload){
+  // abre uma página imprimível (funciona no mobile: compartilhar > imprimir > salvar em PDF)
+  const w = window.open("", "_blank");
+  const logo = payload.logo || "";
+  const title = "Documento - Checklist dos Geradores";
+
+  const rowsFor = (gKey, gName) => {
+    const g = payload.geradores[gKey];
+    return ITEMS.map(it=>{
+      const item = g[it.key] || {};
+      const fotos = (item.fotos || []).slice(0,6).map(src=>`<img class="pimg" src="${src}" alt="Foto"/>`).join("");
+      return `
+        <tr>
+          <td class="colItem">${it.title}</td>
+          <td class="colStatus">${statusLabel(item.status)}</td>
+          <td class="colExec">${escapeHtml(item.executor || "")}</td>
+          <td class="colObs">${escapeHtml(item.observacao || "")}</td>
+          <td class="colFoto">${fotos || "<span class='muted'>—</span>"}</td>
+        </tr>
+      `;
+    }).join("");
+  };
+
+  w.document.open();
+  w.document.write(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title}</title>
+<style>
+  :root{--txt:#111827;--muted:#6b7280;--line:#e5e7eb}
+  body{font-family:Arial, Helvetica, sans-serif; color:var(--txt); margin:18px}
+  .hdr{display:flex; gap:14px; align-items:center; border-bottom:2px solid var(--line); padding-bottom:10px}
+  .logo{width:140px; height:70px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .logo img{max-width:100%; max-height:100%; object-fit:contain}
+  .hinfo{flex:1}
+  .hinfo h1{margin:0; font-size:16px}
+  .hinfo .sub{margin-top:4px; font-size:12px; color:var(--muted)}
+  .meta{margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px}
+  .meta div{padding:8px; border:1px solid var(--line); border-radius:10px}
+  h2{font-size:13px; margin:16px 0 8px}
+  table{width:100%; border-collapse:collapse; font-size:12px}
+  th,td{border:1px solid var(--line); padding:8px; vertical-align:top}
+  th{background:#f9fafb; text-align:left}
+  .muted{color:var(--muted)}
+  .pimg{width:92px;height:64px; object-fit:cover; border:1px solid var(--line); border-radius:8px; margin:2px}
+  .colItem{width:20%}
+  .colStatus{width:12%}
+  .colExec{width:16%}
+  .colObs{width:28%}
+  .colFoto{width:24%}
+  .sign{margin-top:18px; display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px}
+  .box{border:1px solid var(--line); border-radius:10px; padding:12px; height:70px}
+  @media print{
+    body{margin:10mm}
+  }
+</style>
+</head>
+<body>
+  <div class="hdr">
+    <div class="logo">
+      ${logo ? `<img src="${logo}" alt="Logo"/>` : `<span class="muted">Logo</span>`}
+    </div>
+    <div class="hinfo">
+      <h1>${escapeHtml(payload.empresa || "Empresa / Unidade")}</h1>
+      <div class="sub"><b>Checklist dos Geradores</b> • Documento padrão</div>
+      <div class="sub muted">Gerado em: ${new Date().toLocaleString()}</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div><b>Data (ref)</b><br>${escapeHtml(payload.data_ref || "-")}</div>
+    <div><b>Setor / Local</b><br>${escapeHtml(payload.setor || "-")}</div>
+    <div><b>Responsável</b><br>${escapeHtml(payload.responsavel || "-")}</div>
+    <div><b>Mês/Ano</b><br>${escapeHtml(payload.mes || "-")}/${escapeHtml(payload.ano || "-")}</div>
+  </div>
+
+  <h2>Gerador I</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th><th>Status</th><th>Executor</th><th>Observação</th><th>Fotos</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsFor("gerador1","Gerador I")}
+    </tbody>
+  </table>
+
+  <h2>Gerador II</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th><th>Status</th><th>Executor</th><th>Observação</th><th>Fotos</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsFor("gerador2","Gerador II")}
+    </tbody>
+  </table>
+
+  <div class="sign">
+    <div class="box"><b>Assinatura / Executor</b><br><span class="muted">________________________________________</span></div>
+    <div class="box"><b>Assinatura / Verificador</b><br><span class="muted">________________________________________</span></div>
+  </div>
+
+  <script>
+    // abre o diálogo de impressão automaticamente (opcional):
+    // window.print();
+  <\/script>
+</body>
+</html>
+  `);
+  w.document.close();
+}
+
+/* ====== INIT ====== */
+(function init(){
+  $("dia").innerHTML = `<option value="">Selecione</option>` + Array.from({length:31},(_,i)=>i+1)
+    .map(n=>`<option value="${n}">${pad2(n)}</option>`).join("");
+
+  renderGenerator("g1","g1");
+  renderGenerator("g2","g2");
+
+  $("tabG1").addEventListener("click",()=>setTab("g1"));
+  $("tabG2").addEventListener("click",()=>setTab("g2"));
+
+  ["change","input"].forEach(evt=>{
+    ["empresa","mes","ano","dia","setor","responsavel"].forEach(id=>$(id).addEventListener(evt, autoSaveDraft));
+  });
+
+  // Logo
+  renderLogoPreview(getLogo());
+  $("logoFile").addEventListener("change", async (e)=>{
+    const f = e.target.files?.[0];
+    if(!f) return;
+    const dataUrl = await fileToDataURL(f);
+    localStorage.setItem(LS_LOGO, dataUrl);
+    renderLogoPreview(dataUrl);
+    autoSaveDraft();
+  });
+
+  $("btnSave").addEventListener("click", ()=>{
+    const payload=getPayload();
+    const errs=validate(payload);
+    if(errs.length){
+      alert("Corrija antes de salvar:\n\n- " + errs.join("\n- "));
+      return;
+    }
+    upsert(payload);
+  });
+
+  $("btnDoc").addEventListener("click", ()=>{
+    const payload=getPayload();
+    const errs=validate(payload);
+    if(errs.length){
+      alert("Corrija antes de gerar o documento:\n\n- " + errs.join("\n- "));
+      return;
+    }
+    openDocument(payload);
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    const payload = { exported_at: nowISO(), records: loadRecords() };
+    downloadJSON(payload, "checklist_geradores_export.json");
+  });
+
+  $("btnClearAll").addEventListener("click", ()=>{
+    if(!confirm("Apagar TUDO (logo + rascunho + registros) do aparelho?")) return;
+    localStorage.removeItem(LS_LOGO);
+    localStorage.removeItem(LS_DRAFT);
+    localStorage.removeItem(LS_RECORDS);
+    location.reload();
+  });
+
+  $("btnNew").addEventListener("click", ()=>{
+    if(!confirm("Limpar o formulário atual? (registros salvos continuam)")) return;
+    localStorage.removeItem(LS_DRAFT);
+    location.reload();
+  });
+
+  const draft = loadDraft();
+  if(draft) populate(draft);
+
+  renderHistory();
+})();
+</script>
+</body>
+</html>
