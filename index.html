@@ -84,6 +84,7 @@
       cursor:pointer;
       background:rgba(255,255,255,.03);
       color:var(--txt);
+      min-width:0;
     }
     .btn.primary{background:linear-gradient(to bottom, rgba(37,99,235,.95), rgba(37,99,235,.75)); color:#fff; border-color:rgba(37,99,235,.35)}
     .btn.danger{background:rgba(239,68,68,.18); color:#fecaca; border-color:rgba(239,68,68,.28)}
@@ -96,11 +97,16 @@
     .bar{height:100%; width:0%; background:rgba(37,99,235,.55)}
     .footerBar{
       position:fixed; left:0; right:0; bottom:0; z-index:20;
-      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      padding:8px 10px calc(8px + env(safe-area-inset-bottom));
       background:linear-gradient(to top, rgba(11,18,32,.95), rgba(11,18,32,.72), rgba(11,18,32,0));
       backdrop-filter: blur(12px);
     }
-    .footerActions{max-width:520px;margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    /* Botões mais próximos no mobile: usar flex e reduzir gap */
+    .footerActions{
+      max-width:520px;margin:0 auto; display:flex; gap:6px; align-items:center;
+      overflow-x:auto; padding:4px 0;
+    }
+    .footerActions::-webkit-scrollbar{height:6px}
     .tiny{font-size:11px;color:var(--muted);margin-top:10px}
     .logoPreview{
       width:100%; max-width:260px; height:90px;
@@ -120,6 +126,19 @@
     .sumRow{display:flex;justify-content:space-between;gap:10px;align-items:center}
     .sumRow b{font-size:12px}
     .sumRow span{font-size:11px;color:var(--muted);text-align:right}
+
+    /* Camera modal */
+    #camModal{
+      position:fixed; left:0; right:0; top:0; bottom:0; z-index:40;
+      background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center;
+    }
+    #camModal .camBox{width:100%; max-width:520px; background:linear-gradient(180deg,#071228,#0f1a2e); padding:12px; border-radius:12px; border:1px solid var(--line)}
+    #camModal video{width:100%; height:auto; border-radius:8px; background:#000}
+    #camModal .camControls{display:flex; gap:8px; margin-top:8px}
+    @media (max-width:420px){
+      .btn{padding:10px 8px; font-size:13px}
+      .thumb{width:96px;height:68px}
+    }
   </style>
 </head>
 
@@ -152,6 +171,17 @@
       <button class="btn primary" id="btnNext">Próximo</button>
       <button class="btn green" id="btnDoc">Documento</button>
       <button class="btn danger" id="btnClearAll">Apagar tudo</button>
+    </div>
+  </div>
+
+  <!-- Camera modal -->
+  <div id="camModal" aria-hidden="true">
+    <div class="camBox">
+      <video id="camVideo" autoplay playsinline></video>
+      <div class="camControls">
+        <button class="btn" id="camCapture">Capturar</button>
+        <button class="btn" id="camClose">Fechar</button>
+      </div>
     </div>
   </div>
 
@@ -234,10 +264,15 @@ function pillText(status){
 function getLogo(){ return localStorage.getItem(LS_LOGO) || ""; }
 function setLogo(dataUrl){ localStorage.setItem(LS_LOGO, dataUrl || ""); }
 
+// defaultState agora preenche data atual por padrão (quando não houver rascunho salvo)
 function defaultState(){
+  const d = new Date();
+  const mes = pad2(d.getMonth()+1); // "01".."12"
+  const ano = String(d.getFullYear());
+  const dia = String(d.getDate());   // "1".."31" (compatível com dayOptions)
   return {
     stepIndex: 0,
-    meta: { empresa:"", mes:"", ano:"", dia:"", setor:"", responsavel:"" },
+    meta: { empresa:"", mes, ano, dia, setor:"", responsavel:"" },
     // cada item: gerador1/2 -> oleo/baterias/arref/preaq
     geradores:{
       gerador1: {},
@@ -394,9 +429,12 @@ function render(){
 
       <div class="field">
         <label>${escapeHtml(step.photoHint)}</label>
-        <input id="foto" type="file" accept="image/*" capture="environment" />
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="foto" type="file" accept="image/*" capture="environment" style="flex:1" />
+          <button class="btn" id="btnCamInline" style="flex:0 0 120px">Tirar foto</button>
+        </div>
         <div class="thumbs" id="thumbs"></div>
-        <div class="hint">No celular, isso abre a câmera (ou opção de tirar foto).</div>
+        <div class="hint">No celular, o input abre a câmera. Use "Tirar foto" para abrir a câmera diretamente (quando suportado).</div>
       </div>
     `;
 
@@ -450,6 +488,11 @@ function render(){
       syncReqAndPill(it.status, it.fotos);
       // limpa input (permite tirar 2x seguidas no mesmo campo em alguns celulares)
       e.target.value = "";
+    });
+
+    // botão "Tirar foto" -> usa getUserMedia quando disponível
+    $("btnCamInline").addEventListener("click", ()=>{
+      startCameraCapture(step.gen, step.key);
     });
 
     return;
@@ -515,6 +558,7 @@ function renderLogoPreview(dataUrl){
 
 function renderThumbs(fotos){
   const thumbs = $("thumbs");
+  if(!thumbs) return;
   thumbs.innerHTML = "";
   (fotos || []).slice(0,10).forEach((src, idx)=>{
     const img = document.createElement("img");
@@ -780,6 +824,79 @@ function finishSave(){
 }
 
 /* =====================
+   Camera capture (getUserMedia)
+   ===================== */
+let _camStream = null;
+let _camTarget = null; // {gen, key} alvo para salvar foto
+
+async function startCameraCapture(gen, key){
+  // verifica suporte
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert("Câmera não suportada neste navegador.");
+    return;
+  }
+
+  _camTarget = { gen, key };
+  const modal = $("camModal");
+  const video = $("camVideo");
+  try{
+    _camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    video.srcObject = _camStream;
+    modal.style.display = "flex";
+    modal.setAttribute("aria-hidden","false");
+  }catch(err){
+    console.error("Erro abrindo câmera:", err);
+    alert("Não foi possível acessar a câmera. Verifique permissões.");
+  }
+}
+
+function stopCamera(){
+  if(_camStream){
+    _camStream.getTracks().forEach(t=>t.stop());
+    _camStream = null;
+  }
+  const modal = $("camModal");
+  const video = $("camVideo");
+  if(video) video.srcObject = null;
+  if(modal){
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden","true");
+  }
+  _camTarget = null;
+}
+
+$("camClose").addEventListener("click", ()=>stopCamera());
+
+$("camCapture").addEventListener("click", ()=>{
+  const video = $("camVideo");
+  if(!video || !video.videoWidth) return alert("Aguarde a câmera inicializar.");
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+
+  // salva no item alvo
+  if(_camTarget){
+    const st = loadState();
+    const it = getItemState(st, _camTarget.gen, _camTarget.key);
+    it.fotos = it.fotos || [];
+    it.fotos.push(dataUrl);
+    setItemState(st, _camTarget.gen, _camTarget.key, it);
+    saveState(st);
+    // se estivermos visualizando a mesma etapa, atualiza thumbs e pill
+    const state = loadState();
+    const step = STEPS[state.stepIndex];
+    if(step.type === "check" && step.gen === _camTarget.gen && step.key === _camTarget.key){
+      renderThumbs(it.fotos);
+      syncReqAndPill(it.status, it.fotos);
+    }
+  }
+  stopCamera();
+});
+
+/* =====================
    INIT
    ===================== */
 (function init(){
@@ -808,6 +925,11 @@ function finishSave(){
     localStorage.removeItem(LS_STATE);
     localStorage.removeItem(LS_RECORDS);
     location.reload();
+  });
+
+  // fecho modal se clicar fora
+  $("camModal").addEventListener("click", (e)=>{
+    if(e.target === $("camModal")) stopCamera();
   });
 })();
 </script>
