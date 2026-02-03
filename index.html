@@ -71,8 +71,6 @@
     .stepTitle .s{font-size:11px;color:var(--muted);margin-top:2px}
 
     .req{display:none; font-size:11px; color:#fecaca; font-weight:900}
-    .thumbs{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
-    .thumb{width:120px;height:86px;border-radius:14px;border:1px solid var(--line);object-fit:cover;background:rgba(255,255,255,.02)}
     .btnRow{display:flex; gap:10px; margin-top:12px}
     .btn{
       flex:1;
@@ -126,18 +124,8 @@
     .sumRow{display:flex;justify-content:space-between;gap:10px;align-items:center}
     .sumRow b{font-size:12px}
     .sumRow span{font-size:11px;color:var(--muted);text-align:right}
-
-    /* Camera modal */
-    #camModal{
-      position:fixed; left:0; right:0; top:0; bottom:0; z-index:40;
-      background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center;
-    }
-    #camModal .camBox{width:100%; max-width:520px; background:linear-gradient(180deg,#071228,#0f1a2e); padding:12px; border-radius:12px; border:1px solid var(--line)}
-    #camModal video{width:100%; height:auto; border-radius:8px; background:#000}
-    #camModal .camControls{display:flex; gap:8px; margin-top:8px}
     @media (max-width:420px){
       .btn{padding:10px 8px; font-size:13px}
-      .thumb{width:96px;height:68px}
     }
   </style>
 </head>
@@ -148,7 +136,7 @@
       <div class="brand">
         <div>
           <h1>Checklist Geradores</h1>
-          <div class="sub">Etapas • salva no aparelho • fotos pela câmera</div>
+          <div class="sub">Etapas • salva no aparelho</div>
         </div>
         <div class="chip" id="chipStatus">Rascunho</div>
       </div>
@@ -169,19 +157,8 @@
     <div class="footerActions">
       <button class="btn" id="btnBack">Voltar</button>
       <button class="btn primary" id="btnNext">Próximo</button>
-      <button class="btn green" id="btnDoc">Documento</button>
+      <button class="btn green" id="btnDoc">Documento / PDF</button>
       <button class="btn danger" id="btnClearAll">Apagar tudo</button>
-    </div>
-  </div>
-
-  <!-- Camera modal -->
-  <div id="camModal" aria-hidden="true">
-    <div class="camBox">
-      <video id="camVideo" autoplay playsinline></video>
-      <div class="camControls">
-        <button class="btn" id="camCapture">Capturar</button>
-        <button class="btn" id="camClose">Fechar</button>
-      </div>
     </div>
   </div>
 
@@ -191,13 +168,15 @@
    ===================== */
 // Itens por gerador conforme seu checklist
 const CHECK_ITEMS = [
-  { key:"oleo",     title:"Nível de Óleo", statusType:"ok_nok", photoHint:"Tire uma foto do nível de óleo" },
-  { key:"baterias", title:"Carga de baterias", statusType:"ok_nok", photoHint:"Foto das baterias / carregador" },
-  { key:"arref",    title:"Nível do sistema de arrefecimento", statusType:"ok_nok", photoHint:"Foto do reservatório" },
-  { key:"preaq",    title:"Sistema de pré aquecimento", statusType:"funciona", photoHint:"Foto do painel / pré-aquecimento" },
+  { key:"oleo",     title:"Nível de Óleo", statusType:"ok_nok" },
+  { key:"baterias", title:"Carga de baterias", statusType:"ok_nok" },
+  { key:"arref",    title:"Nível do sistema de arrefecimento", statusType:"ok_nok" },
+  { key:"preaq",    title:"Sistema de pré aquecimento", statusType:"funciona" },
+  // novo item: nível de combustível
+  { key:"combustivel", title:"Nível de Combustível", statusType:"ok_nok" }
 ];
 
-// Monta etapas: Identificação + 4 do G1 + 4 do G2 + Revisão
+// Monta etapas: Identificação + 5 do G1 + 5 do G2 + Revisão
 const STEPS = [
   { type:"meta", title:"Identificação do documento" },
   ...CHECK_ITEMS.map(it => ({ type:"check", gen:"gerador1", ...it, stepTitle:`Gerador I • ${it.title}` })),
@@ -221,18 +200,9 @@ const nowISO = ()=>new Date().toISOString();
 const ymd = (ano,mes,dia)=>`${ano}-${mes}-${pad2(dia)}`;
 
 function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, s => ({
+  return String(str||"").replace(/[&<>"']/g, s => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[s]));
-}
-
-function fileToDataURL(file){
-  return new Promise((resolve,reject)=>{
-    const r=new FileReader();
-    r.onload=()=>resolve(r.result);
-    r.onerror=reject;
-    r.readAsDataURL(file);
-  });
 }
 
 function statusOptions(type){
@@ -264,7 +234,7 @@ function pillText(status){
 function getLogo(){ return localStorage.getItem(LS_LOGO) || ""; }
 function setLogo(dataUrl){ localStorage.setItem(LS_LOGO, dataUrl || ""); }
 
-// defaultState agora preenche data atual por padrão (quando não houver rascunho salvo)
+// defaultState agora preenche data atual por padrão e empresa padrão "Hospital Geral"
 function defaultState(){
   const d = new Date();
   const mes = pad2(d.getMonth()+1); // "01".."12"
@@ -272,8 +242,8 @@ function defaultState(){
   const dia = String(d.getDate());   // "1".."31" (compatível com dayOptions)
   return {
     stepIndex: 0,
-    meta: { empresa:"", mes, ano, dia, setor:"", responsavel:"" },
-    // cada item: gerador1/2 -> oleo/baterias/arref/preaq
+    meta: { empresa:"Hospital Geral", mes, ano, dia, setor:"", responsavel:"" },
+    // cada item: gerador1/2 -> oleo/baterias/arref/preaq/combustivel
     geradores:{
       gerador1: {},
       gerador2: {}
@@ -326,7 +296,7 @@ function render(){
 
       <div class="field">
         <label>Empresa / Unidade</label>
-        <input id="empresa" type="text" placeholder="Ex.: Hospital Geral" value="${escapeHtml(state.meta.empresa||"")}"/>
+        <input id="empresa" type="text" placeholder="Ex.: Hospital Geral" value="${escapeHtml(state.meta.empresa||"Hospital Geral")}"/>
       </div>
 
       <div class="field">
@@ -363,7 +333,7 @@ function render(){
         <input id="responsavel" type="text" placeholder="Seu nome" value="${escapeHtml(state.meta.responsavel||"")}"/>
       </div>
 
-      <div class="hint">Na próxima etapa você preenche item por item, com foto pela câmera.</div>
+      <div class="hint">Na próxima etapa você preenche item por item.</div>
     `;
 
     // logo preview
@@ -388,11 +358,9 @@ function render(){
     $("logoFile").addEventListener("change", async (e)=>{
       const f = e.target.files?.[0];
       if(!f) return;
-      const dataUrl = await fileToDataURL(f);
-      setLogo(dataUrl);
-      renderLogoPreview(dataUrl);
-      // salva estado pra manter “documento completo”
-      saveState(loadState());
+      const reader = new FileReader();
+      reader.onload = ()=>{ setLogo(reader.result); renderLogoPreview(reader.result); saveState(loadState()); };
+      reader.readAsDataURL(f);
     });
 
     return;
@@ -405,19 +373,14 @@ function render(){
       <div class="stepTitle">
         <div>
           <div class="t">${escapeHtml(step.stepTitle || step.title)}</div>
-          <div class="s">Selecione o status, preencha executor e tire foto quando necessário.</div>
+          <div class="s">Selecione o status e preencha observação / nível de combustível quando necessário.</div>
         </div>
         <span class="pill ${pillClass(itemState.status)}" id="pill">${pillText(itemState.status)}</span>
       </div>
 
       <div class="field">
-        <label>Status <span class="req" id="req">*foto obrigatória quando “Não conforme”</span></label>
+        <label>Status</label>
         <select id="status">${statusOptions(step.statusType)}</select>
-      </div>
-
-      <div class="field">
-        <label>Executor</label>
-        <input id="executor" type="text" placeholder="Nome do executor" value="${escapeHtml(itemState.executor||"")}"/>
       </div>
 
       <div class="field">
@@ -425,25 +388,25 @@ function render(){
         <textarea id="obs" placeholder="Detalhes (se necessário)">${escapeHtml(itemState.observacao||"")}</textarea>
       </div>
 
-      <div class="miniLine"></div>
-
       <div class="field">
-        <label>${escapeHtml(step.photoHint)}</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="foto" type="file" accept="image/*" capture="environment" style="flex:1" />
-          <button class="btn" id="btnCamInline" style="flex:0 0 120px">Tirar foto</button>
-        </div>
-        <div class="thumbs" id="thumbs"></div>
-        <div class="hint">No celular, o input abre a câmera. Use "Tirar foto" para abrir a câmera diretamente (quando suportado).</div>
+        <label>Nível de Combustível</label>
+        <select id="combustivel">
+          <option value="">Selecione</option>
+          <option value="CHEIO">Cheio</option>
+          <option value="TRES_QUARTOS">3/4</option>
+          <option value="MEIO">Meio</option>
+          <option value="UM_QUARTO">1/4</option>
+          <option value="VAZIO">Vazio</option>
+        </select>
       </div>
     `;
 
-    // set status selected
+    // set values
     $("status").value = itemState.status || "";
-    syncReqAndPill(itemState.status, itemState.fotos);
-
-    // render thumbs
-    renderThumbs(itemState.fotos || []);
+    $("combustivel").value = itemState.combustivel || "";
+    // pill
+    const pill = $("pill");
+    if(pill){ pill.className = `pill ${pillClass(itemState.status)}`; pill.textContent = pillText(itemState.status); }
 
     // listeners
     $("status").addEventListener("change", ()=>{
@@ -452,17 +415,11 @@ function render(){
       it.status = $("status").value;
       setItemState(st, step.gen, step.key, it);
       saveState(st);
-      syncReqAndPill(it.status, it.fotos);
+      const pill = $("pill");
+      if(pill){ pill.className = `pill ${pillClass(it.status)}`; pill.textContent = pillText(it.status); }
     });
 
     ["input","change"].forEach(evt=>{
-      $("executor").addEventListener(evt, ()=>{
-        const st = loadState();
-        const it = getItemState(st, step.gen, step.key);
-        it.executor = $("executor").value.trim();
-        setItemState(st, step.gen, step.key, it);
-        saveState(st);
-      });
       $("obs").addEventListener(evt, ()=>{
         const st = loadState();
         const it = getItemState(st, step.gen, step.key);
@@ -470,29 +427,13 @@ function render(){
         setItemState(st, step.gen, step.key, it);
         saveState(st);
       });
-    });
-
-    $("foto").addEventListener("change", async (e)=>{
-      const files = [...(e.target.files || [])];
-      if(!files.length) return;
-      const st = loadState();
-      const it = getItemState(st, step.gen, step.key);
-      it.fotos = it.fotos || [];
-      for(const f of files){
-        const src = await fileToDataURL(f);
-        it.fotos.push(src);
-      }
-      setItemState(st, step.gen, step.key, it);
-      saveState(st);
-      renderThumbs(it.fotos);
-      syncReqAndPill(it.status, it.fotos);
-      // limpa input (permite tirar 2x seguidas no mesmo campo em alguns celulares)
-      e.target.value = "";
-    });
-
-    // botão "Tirar foto" -> usa getUserMedia quando disponível
-    $("btnCamInline").addEventListener("click", ()=>{
-      startCameraCapture(step.gen, step.key);
+      $("combustivel").addEventListener(evt, ()=>{
+        const st = loadState();
+        const it = getItemState(st, step.gen, step.key);
+        it.combustivel = $("combustivel").value;
+        setItemState(st, step.gen, step.key, it);
+        saveState(st);
+      });
     });
 
     return;
@@ -523,7 +464,7 @@ function render(){
       <h2>Gerador II</h2>
       ${renderReviewBlock(g2)}
 
-      <div class="hint">Toque em “Salvar” para gravar o registro. Você também pode gerar o documento no botão “Documento”.</div>
+      <div class="hint">Toque em “Salvar” para gravar o registro. Ao salvar o documento em nova janela será aberto o diálogo de impressão (salvar como PDF).</div>
     `;
 
     return;
@@ -545,6 +486,7 @@ function dayOptions(sel){
 
 function renderLogoPreview(dataUrl){
   const box = $("logoPreview");
+  if(!box) return;
   box.innerHTML = "";
   if(!dataUrl){
     box.innerHTML = `<span class="hint">Nenhum logo selecionado</span>`;
@@ -556,42 +498,13 @@ function renderLogoPreview(dataUrl){
   box.appendChild(img);
 }
 
-function renderThumbs(fotos){
-  const thumbs = $("thumbs");
-  if(!thumbs) return;
-  thumbs.innerHTML = "";
-  (fotos || []).slice(0,10).forEach((src, idx)=>{
-    const img = document.createElement("img");
-    img.src = src;
-    img.className = "thumb";
-    img.alt = "Foto " + (idx+1);
-    thumbs.appendChild(img);
-  });
-}
-
-function syncReqAndPill(status, fotos){
-  const needsPhoto = (status==="NAO_CONFORME" || status==="NAO_FUNCIONANDO");
-  const hasPhoto = (fotos || []).length > 0;
-  const req = $("req");
-  const pill = $("pill");
-  if(req) req.style.display = needsPhoto ? "inline" : "none";
-  if(pill){
-    pill.className = `pill ${pillClass(status)}`;
-    pill.textContent = pillText(status);
-    // se precisa foto e não tem, deixa pill vermelha pra alertar
-    if(needsPhoto && !hasPhoto){
-      pill.className = "pill bad";
-      pill.textContent = "Falta foto";
-    }
-  }
-}
-
 /* =====================
    Estado item por item
    ===================== */
 function getItemState(state, gen, key){
   state.geradores[gen] = state.geradores[gen] || {};
-  state.geradores[gen][key] = state.geradores[gen][key] || { status:"", executor:"", observacao:"", fotos:[] };
+  // sem fotos, inclui combustivel
+  state.geradores[gen][key] = state.geradores[gen][key] || { status:"", observacao:"", combustivel:"" };
   return state.geradores[gen][key];
 }
 function setItemState(state, gen, key, val){
@@ -633,29 +546,22 @@ function validateForStep(stepIndex){
     return [];
   }
 
-  // valida cada item: se não conforme -> precisa foto
+  // valida cada item: apenas status é obrigatório agora
   if(step.type === "check"){
     const it = getItemState(state, step.gen, step.key);
     const errs=[];
     if(!it.status) errs.push("Selecione o status.");
-    const needsPhoto = (it.status==="NAO_CONFORME" || it.status==="NAO_FUNCIONANDO");
-    if(needsPhoto && (!it.fotos || it.fotos.length===0)) errs.push("Foto obrigatória para Não conforme.");
     return errs;
   }
 
-  // valida final
+  // valida final: garante todos status preenchidos
   if(step.type === "review"){
-    // aqui pode ser mais rígido (ex: todos os status preenchidos)
     const payload = buildPayload(state);
     const errs=[];
-    // garante todos status preenchidos
     ["gerador1","gerador2"].forEach(g=>{
       CHECK_ITEMS.forEach(it=>{
         const v = payload.geradores[g]?.[it.key]?.status;
         if(!v) errs.push(`${g.toUpperCase()} → ${it.title}: selecione o status.`);
-        const needsPhoto = (v==="NAO_CONFORME" || v==="NAO_FUNCIONANDO");
-        const fotos = payload.geradores[g]?.[it.key]?.fotos || [];
-        if(needsPhoto && fotos.length===0) errs.push(`${g.toUpperCase()} → ${it.title}: falta foto.`);
       });
     });
     return errs;
@@ -690,7 +596,7 @@ function statusLabel(st){
   if(st==="NAO_FUNCIONANDO") return "NÃO FUNCIONANDO";
   return "—";
 }
-function openDocument(payload){
+function openDocument(payload, autoPrint = false){
   const w = window.open("", "_blank");
   const logo = payload.logo || "";
   const title = "Documento - Checklist dos Geradores";
@@ -699,14 +605,13 @@ function openDocument(payload){
     const g = payload.geradores[gKey] || {};
     return CHECK_ITEMS.map(it=>{
       const item = g[it.key] || {};
-      const fotos = (item.fotos || []).slice(0,6).map(src=>`<img class="pimg" src="${src}" alt="Foto"/>`).join("");
+      const combustivelLabel = item.combustivel || "—";
       return `
         <tr>
           <td class="colItem">${it.title}</td>
           <td class="colStatus">${statusLabel(item.status)}</td>
-          <td class="colExec">${escapeHtml(item.executor || "")}</td>
           <td class="colObs">${escapeHtml(item.observacao || "")}</td>
-          <td class="colFoto">${fotos || "<span class='muted'>—</span>"}</td>
+          <td class="colComb">${escapeHtml(combustivelLabel)}</td>
         </tr>
       `;
     }).join("");
@@ -734,8 +639,7 @@ function openDocument(payload){
   th,td{border:1px solid var(--line); padding:8px; vertical-align:top}
   th{background:#f9fafb; text-align:left}
   .muted{color:var(--muted)}
-  .pimg{width:92px;height:64px; object-fit:cover; border:1px solid var(--line); border-radius:8px; margin:2px}
-  .colItem{width:20%}.colStatus{width:12%}.colExec{width:16%}.colObs{width:28%}.colFoto{width:24%}
+  .colItem{width:30%}.colStatus{width:12%}.colObs{width:38%}.colComb{width:20%}
   .sign{margin-top:18px; display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px}
   .box{border:1px solid var(--line); border-radius:10px; padding:12px; height:70px}
   @media print{ body{margin:10mm} }
@@ -758,11 +662,11 @@ function openDocument(payload){
   </div>
 
   <h2>Gerador I</h2>
-  <table><thead><tr><th>Item</th><th>Status</th><th>Executor</th><th>Observação</th><th>Fotos</th></tr></thead>
+  <table><thead><tr><th>Item</th><th>Status</th><th>Observação</th><th>Combustível</th></tr></thead>
   <tbody>${rowsFor("gerador1")}</tbody></table>
 
   <h2>Gerador II</h2>
-  <table><thead><tr><th>Item</th><th>Status</th><th>Executor</th><th>Observação</th><th>Fotos</th></tr></thead>
+  <table><thead><tr><th>Item</th><th>Status</th><th>Observação</th><th>Combustível</th></tr></thead>
   <tbody>${rowsFor("gerador2")}</tbody></table>
 
   <div class="sign">
@@ -771,6 +675,11 @@ function openDocument(payload){
   </div>
 </body></html>`);
   w.document.close();
+
+  // aciona diálogo de impressão (permitido na maioria dos navegadores ao abrir nova janela)
+  if(autoPrint){
+    setTimeout(()=>{ try{ w.print(); }catch(e){ console.warn("print failed",e); } }, 600);
+  }
 }
 
 /* =====================
@@ -780,12 +689,12 @@ function renderReviewBlock(g){
   return CHECK_ITEMS.map(it=>{
     const item = (g && g[it.key]) ? g[it.key] : {};
     const st = item.status || "";
-    const fotos = (item.fotos||[]).length;
+    const comb = item.combustivel || "—";
     const pill = `<span class="pill ${pillClass(st)}">${escapeHtml(pillText(st))}</span>`;
     return `
       <div class="sumRow" style="margin-top:10px">
         <b>${escapeHtml(it.title)}</b>
-        <span>${pill} • fotos: ${fotos}</span>
+        <span>${pill} • combustível: ${escapeHtml(comb)}</span>
       </div>
     `;
   }).join("");
@@ -821,80 +730,10 @@ function finishSave(){
   }
   saveAsRecord();
   alert("Registro salvo!");
+  // gera documento e abre diálogo de impressão para salvar como PDF
+  const payload = buildPayload(loadState());
+  openDocument(payload, true);
 }
-
-/* =====================
-   Camera capture (getUserMedia)
-   ===================== */
-let _camStream = null;
-let _camTarget = null; // {gen, key} alvo para salvar foto
-
-async function startCameraCapture(gen, key){
-  // verifica suporte
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    alert("Câmera não suportada neste navegador.");
-    return;
-  }
-
-  _camTarget = { gen, key };
-  const modal = $("camModal");
-  const video = $("camVideo");
-  try{
-    _camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-    video.srcObject = _camStream;
-    modal.style.display = "flex";
-    modal.setAttribute("aria-hidden","false");
-  }catch(err){
-    console.error("Erro abrindo câmera:", err);
-    alert("Não foi possível acessar a câmera. Verifique permissões.");
-  }
-}
-
-function stopCamera(){
-  if(_camStream){
-    _camStream.getTracks().forEach(t=>t.stop());
-    _camStream = null;
-  }
-  const modal = $("camModal");
-  const video = $("camVideo");
-  if(video) video.srcObject = null;
-  if(modal){
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden","true");
-  }
-  _camTarget = null;
-}
-
-$("camClose").addEventListener("click", ()=>stopCamera());
-
-$("camCapture").addEventListener("click", ()=>{
-  const video = $("camVideo");
-  if(!video || !video.videoWidth) return alert("Aguarde a câmera inicializar.");
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-
-  // salva no item alvo
-  if(_camTarget){
-    const st = loadState();
-    const it = getItemState(st, _camTarget.gen, _camTarget.key);
-    it.fotos = it.fotos || [];
-    it.fotos.push(dataUrl);
-    setItemState(st, _camTarget.gen, _camTarget.key, it);
-    saveState(st);
-    // se estivermos visualizando a mesma etapa, atualiza thumbs e pill
-    const state = loadState();
-    const step = STEPS[state.stepIndex];
-    if(step.type === "check" && step.gen === _camTarget.gen && step.key === _camTarget.key){
-      renderThumbs(it.fotos);
-      syncReqAndPill(it.status, it.fotos);
-    }
-  }
-  stopCamera();
-});
 
 /* =====================
    INIT
@@ -915,8 +754,7 @@ $("camCapture").addEventListener("click", ()=>{
 
   $("btnDoc").addEventListener("click", ()=>{
     const payload = buildPayload(loadState());
-    // aqui a gente não bloqueia (mas se quiser, valida tudo)
-    openDocument(payload);
+    openDocument(payload, true);
   });
 
   $("btnClearAll").addEventListener("click", ()=>{
@@ -925,11 +763,6 @@ $("camCapture").addEventListener("click", ()=>{
     localStorage.removeItem(LS_STATE);
     localStorage.removeItem(LS_RECORDS);
     location.reload();
-  });
-
-  // fecho modal se clicar fora
-  $("camModal").addEventListener("click", (e)=>{
-    if(e.target === $("camModal")) stopCamera();
   });
 })();
 </script>
