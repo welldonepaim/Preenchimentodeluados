@@ -338,20 +338,25 @@ function render(){
     renderLogoPreview(LOGO_URL);
 
     // listeners
-    ["input","change"].forEach(evt=>{
-      ["mes","ano","dia","setor","responsavel"].forEach(id=>{
-        $(id).addEventListener(evt, ()=>{
-          const st = loadState();
-          st.meta.empresa = $("empresa").value.trim();
-          st.meta.mes = $("mes").value;
-          st.meta.ano = $("ano").value;
-          st.meta.dia = $("dia").value;
-          st.meta.setor = $("setor").value.trim();
-          st.meta.responsavel = $("responsavel").value.trim();
-          saveState(st);
-        });
-      });
+["input","change"].forEach(evt=>{
+  ["mes","ano","dia","setor","responsavel"].forEach(id=>{
+    const el = $(id);
+    if(!el) return;
+
+    el.addEventListener(evt, ()=>{
+      const st = loadState();
+
+      st.meta.mes = $("mes") ? $("mes").value : "";
+      st.meta.ano = $("ano") ? $("ano").value : "";
+      st.meta.dia = $("dia") ? $("dia").value : "";
+      st.meta.setor = $("setor") ? $("setor").value.trim() : "";
+      st.meta.responsavel = $("responsavel") ? $("responsavel").value.trim() : "";
+
+      saveState(st);
     });
+  });
+});
+
 
    
 
@@ -760,4 +765,3 @@ function finishSave(){
 </script>
 </body>
 </html>
-
