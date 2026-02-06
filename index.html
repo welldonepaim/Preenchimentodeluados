@@ -339,7 +339,7 @@ function render(){
 
     // listeners
     ["input","change"].forEach(evt=>{
-      ["empresa","mes","ano","dia","setor","responsavel"].forEach(id=>{
+      ["mes","ano","dia","setor","responsavel"].forEach(id=>{
         $(id).addEventListener(evt, ()=>{
           const st = loadState();
           st.meta.empresa = $("empresa").value.trim();
@@ -760,3 +760,4 @@ function finishSave(){
 </script>
 </body>
 </html>
+
