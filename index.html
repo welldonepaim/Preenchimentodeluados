@@ -163,6 +163,9 @@
   </div>
 
 <script>
+const LOGO_URL = "./img/Logo-HG-Vertical.png";
+
+
 /* =====================
    ETAPAS (wizard)
    ===================== */
@@ -188,7 +191,7 @@ const STEPS = [
    STORAGE
    ===================== */
 const LS_STATE = "chk_wizard_state_v1";
-const LS_LOGO  = "chk_wizard_logo_v1";
+
 const LS_RECORDS = "chk_wizard_records_v1";
 
 /* =====================
@@ -231,8 +234,6 @@ function pillText(status){
   return "Pendente";
 }
 
-function getLogo(){ return localStorage.getItem(LS_LOGO) || ""; }
-function setLogo(dataUrl){ localStorage.setItem(LS_LOGO, dataUrl || ""); }
 
 // defaultState agora preenche data atual por padrão e empresa padrão "Hospital Geral"
 function defaultState(){
@@ -294,17 +295,14 @@ function render(){
     card.innerHTML = `
       <h2>${step.title}</h2>
 
-      <div class="field">
-        <label>Empresa / Unidade</label>
-        <input id="empresa" type="text" placeholder="Ex.: Hospital Geral" value="${escapeHtml(state.meta.empresa||"Hospital Geral")}"/>
-      </div>
+    
 
       <div class="field">
-        <label>Logo da empresa (opcional)</label>
-        <input id="logoFile" type="file" accept="image/*" />
-        <div class="logoPreview" id="logoPreview"></div>
-        <div class="hint">O logo fica salvo no aparelho e aparece no documento.</div>
-      </div>
+      <label>Logo (fixo do projeto)</label>
+      <div class="logoPreview" id="logoPreview"></div>
+      <div class="hint">Logo carregado de <b>img/Logo HG Vertical.png</b>.</div>
+       </div>
+
 
       <div class="row">
         <div class="field">
@@ -337,7 +335,7 @@ function render(){
     `;
 
     // logo preview
-    renderLogoPreview(getLogo());
+    renderLogoPreview(LOGO_URL);
 
     // listeners
     ["input","change"].forEach(evt=>{
@@ -355,13 +353,7 @@ function render(){
       });
     });
 
-    $("logoFile").addEventListener("change", async (e)=>{
-      const f = e.target.files?.[0];
-      if(!f) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{ setLogo(reader.result); renderLogoPreview(reader.result); saveState(loadState()); };
-      reader.readAsDataURL(f);
-    });
+   
 
     return;
   }
@@ -521,7 +513,7 @@ function buildPayload(state){
     schema:"chk_geradores_wizard_v1",
     created_at: nowISO(),
     empresa: state.meta.empresa,
-    logo: getLogo(),
+    logo:LOGO_URL,
     mes, ano, dia,
     data_ref: (mes && ano && dia) ? ymd(ano, mes, Number(dia)) : "",
     setor: state.meta.setor,
@@ -759,7 +751,7 @@ function finishSave(){
 
   $("btnClearAll").addEventListener("click", ()=>{
     if(!confirm("Apagar tudo (logo + rascunho + registros) do aparelho?")) return;
-    localStorage.removeItem(LS_LOGO);
+    
     localStorage.removeItem(LS_STATE);
     localStorage.removeItem(LS_RECORDS);
     location.reload();
